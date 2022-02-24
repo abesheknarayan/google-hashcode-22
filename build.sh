@@ -1,3 +1,5 @@
+g++ -o ./bin/sol sol.cpp
+
 ./bin/sol < tests/a_an_example.in.txt > output/a_an_example.out.txt
 ./bin/sol < tests/b_better_start_small.in.txt > output/b_better_start_small.out.txt
 ./bin/sol < tests/c_collaboration.in.txt > output/c_collaboration.out.txt
