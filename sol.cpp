@@ -23,7 +23,9 @@ struct Project
     int score;
     int deadline;
     int noOfRoles;
-    map<skillName, int> roles;
+    map<skillName, int> printmap;
+    map<skillName, vector<int>> roles;
+    map<pair<skillName, int>, vector<int>> ordered_roles;
 };
 
 struct Output
@@ -31,6 +33,7 @@ struct Output
     ll score;
     int noOfProjects;
     map<string, vector<string>> matching;
+    map<string, vector<pair<int, int>>> debug_level;
 };
 
 Output greedyMatch(vector<Project> &projects, vector<Contributor> &contributors)
@@ -82,38 +85,54 @@ Output greedyMatch(vector<Project> &projects, vector<Contributor> &contributors)
         // asign contributors
         int assigned = 0;
         map<skillName, pair<int, int>> added;
-        vector<string> ordered_contributors;
+        vector<pair<string, int>> ordered_contributors;
+        vector<pair<int, int>> debug_level;
+        int f = 0;
         for (auto r : project.roles)
         {
             string rskillname = r.first;
-            int rlevel = r.second;
-            auto foundc = freeContributors[rskillname].lower_bound({rlevel, -inf});
-            if (foundc != freeContributors[rskillname].end())
+            sort(r.second.begin(),r.second.end());
+            for (auto rlevel : r.second)
             {
-                // found some contri
-                assigned++;
-                added[rskillname] = *foundc;
-                freeContributors[rskillname].erase(foundc);
-                ordered_contributors.push_back(contributors[foundc->second].name);
+
+                auto foundc = freeContributors[rskillname].lower_bound({rlevel, -inf});
+                if (foundc != freeContributors[rskillname].end())
+                {
+                    // found some contri
+                    assigned++;
+                    added[rskillname] = *foundc;
+                    freeContributors[rskillname].erase(foundc);
+                    assert(foundc->first >= rlevel);
+                    ordered_contributors.push_back({contributors[foundc->second].name, project.ordered_roles[{rskillname, rlevel}].back()});
+                    project.ordered_roles[{rskillname,rlevel}].pop_back();
+                    debug_level.push_back({foundc->first, rlevel});
+                }
+                else
+                {
+                    f = 1;
+                    break;
+                }
             }
-            else
-            {
-                break;
-            }
+            if(f)break;
         }
-        if (assigned == project.roles.size())
+        if (assigned == project.noOfRoles)
         {
             int finish = time + project.duration;
-            op.score += max(0,project.score - (max(0,finish-project.deadline)));
+            op.score += max(0, project.score - (max(0, finish - project.deadline)));
             op.noOfProjects++;
+            assert(assigned == ordered_contributors.size());
             // add them to used
             for (auto ppl : added)
             {
-                usedContributors.insert({finish,ppl.second.second});
+                usedContributors.insert({finish, ppl.second.second});
             }
-            for(auto ppl:ordered_contributors) {
-                op.matching[project.name] = ordered_contributors;
+            vector<string> reordered_contributors(assigned);
+            for (auto ppl : ordered_contributors)
+            {
+                reordered_contributors[ppl.second] = ppl.first;
             }
+            op.matching[project.name] = reordered_contributors;
+            op.debug_level[project.name] = debug_level;
         }
         else
         {
@@ -124,7 +143,6 @@ Output greedyMatch(vector<Project> &projects, vector<Contributor> &contributors)
             }
         }
     }
-
 
     return op;
 }
@@ -173,7 +191,8 @@ void solve()
             string skill;
             int level;
             cin >> skill >> level;
-            projects[i].roles[skill] = level;
+            projects[i].ordered_roles[{skill, level}].push_back(j);
+            projects[i].roles[skill].push_back(level);
         }
     }
 
@@ -213,7 +232,6 @@ void solve()
             op2 = greedyMatch(nowprojects, nowcontributors);
         }
 
-        // cout << op1.score << " " << op2.score << "\n";
 
         if (op1.score > op2.score)
         {
