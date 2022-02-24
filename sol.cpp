@@ -24,6 +24,9 @@ struct Project
 void solve()
 {
     int C, P; // no of contributors, no of projects
+    
+    cin>>C>>P;
+    
     vector<Contributor> contributors(C);
     vector<Project> projects(P);
 
